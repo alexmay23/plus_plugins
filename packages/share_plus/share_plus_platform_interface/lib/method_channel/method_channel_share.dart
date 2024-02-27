@@ -20,12 +20,17 @@ import 'package:uuid/uuid.dart';
 class MethodChannelShare extends SharePlatform {
   /// [MethodChannel] used to communicate with the platform side.
   @visibleForTesting
-  static const MethodChannel channel =
-      MethodChannel('dev.fluttercommunity.plus/share');
+  static const MethodChannel channel = MethodChannel('dev.fluttercommunity.plus/share');
 
   @override
-  Future<void> shareUri(Uri uri) {
+  Future<void> shareUri(Uri uri, {Rect? sharePositionOrigin}) {
     final params = <String, dynamic>{'uri': uri.toString()};
+    if (sharePositionOrigin != null) {
+      params['originX'] = sharePositionOrigin.left;
+      params['originY'] = sharePositionOrigin.top;
+      params['originWidth'] = sharePositionOrigin.width;
+      params['originHeight'] = sharePositionOrigin.height;
+    }
     return channel.invokeMethod<void>('shareUri', params);
   }
 
@@ -65,8 +70,7 @@ class MethodChannelShare extends SharePlatform {
     assert(paths.every((element) => element.isNotEmpty));
     final params = <String, dynamic>{
       'paths': paths,
-      'mimeTypes': mimeTypes ??
-          paths.map((String path) => _mimeTypeForPath(path)).toList(),
+      'mimeTypes': mimeTypes ?? paths.map((String path) => _mimeTypeForPath(path)).toList(),
     };
 
     if (subject != null) params['subject'] = subject;
@@ -103,8 +107,7 @@ class MethodChannelShare extends SharePlatform {
     }
 
     final result =
-        await channel.invokeMethod<String>('shareWithResult', params) ??
-            'dev.fluttercommunity.plus/share/unavailable';
+        await channel.invokeMethod<String>('shareWithResult', params) ?? 'dev.fluttercommunity.plus/share/unavailable';
 
     return ShareResult(result, _statusFromResult(result));
   }
@@ -122,8 +125,7 @@ class MethodChannelShare extends SharePlatform {
     assert(paths.every((element) => element.isNotEmpty));
     final params = <String, dynamic>{
       'paths': paths,
-      'mimeTypes': mimeTypes ??
-          paths.map((String path) => _mimeTypeForPath(path)).toList(),
+      'mimeTypes': mimeTypes ?? paths.map((String path) => _mimeTypeForPath(path)).toList(),
     };
 
     if (subject != null) params['subject'] = subject;
@@ -136,9 +138,8 @@ class MethodChannelShare extends SharePlatform {
       params['originHeight'] = sharePositionOrigin.height;
     }
 
-    final result =
-        await channel.invokeMethod<String>('shareFilesWithResult', params) ??
-            'dev.fluttercommunity.plus/share/unavailable';
+    final result = await channel.invokeMethod<String>('shareFilesWithResult', params) ??
+        'dev.fluttercommunity.plus/share/unavailable';
 
     return ShareResult(result, _statusFromResult(result));
   }
@@ -153,9 +154,7 @@ class MethodChannelShare extends SharePlatform {
   }) async {
     final filesWithPath = await _getFiles(files);
 
-    final mimeTypes = filesWithPath
-        .map((e) => e.mimeType ?? _mimeTypeForPath(e.path))
-        .toList();
+    final mimeTypes = filesWithPath.map((e) => e.mimeType ?? _mimeTypeForPath(e.path)).toList();
 
     return shareFilesWithResult(
       filesWithPath.map((e) => e.path).toList(),
@@ -182,8 +181,7 @@ class MethodChannelShare extends SharePlatform {
         if (element.path.isEmpty) {
           final name = uuid.v4();
 
-          final extension =
-              extensionFromMime(element.mimeType ?? 'octet-stream');
+          final extension = extensionFromMime(element.mimeType ?? 'octet-stream');
 
           final path = '$tempPath/$name.$extension';
           final file = File(path);
